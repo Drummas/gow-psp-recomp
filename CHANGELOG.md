@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.7.0 (2026-11-20)
+
+- **The launcher keeps everything in its own folder.** Builds, saves, settings and the build tools now live in the
+  folder with `GoWLauncher.exe` (in `build\`) instead of a `GoW_PSP_data` folder next to it, so an installation is
+  one folder that can be moved or copied anywhere. Installations from v1.6.0 and earlier keep using their existing
+  `GoW_PSP_data` folder: move it into the launcher's folder to make the installation portable.
+- **A moved folder keeps working.** The paths inside the installation folder are saved relative to it in
+  `build\launcher.json`, and a build made before the move (CMake records absolute paths) is configured again on the
+  next Build instead of failing.
+
 ## v1.6.0 (2026-11-13)
 
 - **Fix: The Vortex in Ghost of Sparta never ended** (issues #51, #56, #62, #65, #66): after the helmsman is struck

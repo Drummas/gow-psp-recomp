@@ -1,7 +1,18 @@
 # Builds GoWLauncher.exe on Windows and uploads it as a workflow artifact.
 # No game data is used or available here: the launcher bundles only git-tracked sources and asks the player for
-# their own disc image. Releases are created manually by the maintainer, so this workflow publishes
-# nothing.
+# their own disc image.
+#
+# A release is made by the publish job below, through the Auto Release action
+# (https://github.com/marketplace/actions/auto-release, CupOfTea696/gh-action-auto-release): a pushed commit whose
+# message starts with
+#     Release: 1.7.0
+# (or Release: v1.7.0, or Release: 1.7.0 (#72)) creates the release v1.7.0, with the same artifacts as a release
+# made by hand: GoW_PSP_Launcher-v1.7.0.zip and SHA256SUMS.txt, plus their build provenance (GitHub adds the source
+# archives itself). Its notes are that version's section of CHANGELOG.md, so write the section, set VERSION in
+# tools/launcher.pyw to the same version, and make that commit the last change of the push: the ZIP is built from
+# the pushed tree, and the job refuses to attach a ZIP named after another version.
+# Any other commit publishes nothing. In the Actions tab, "Run workflow" with the release input ticked releases the
+# VERSION of that commit the same way, without pushing anything.
 name: launcher
 
 on:
@@ -10,6 +21,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Create a GitHub release for this commit's VERSION (no release commit message needed)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -102,3 +118,126 @@ jobs:
           name: GoWLauncher-${{ env.ARTIFACT_REF }}-${{ github.sha }}
           path: build/launcher_dist/GoWLauncher.exe
           if-no-files-found: error
+
+  publish:
+    # Publishes exactly what the build job made, so an automatic release carries the same two files as a manual
+    # one. A push to main is decided by the Auto Release action (the version in the release commit message); a
+    # manual run releases the VERSION of that commit. Tags and pull requests never publish here: the release tag is
+    # made by this job.
+    needs: build
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' && inputs.release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # the release, its tag and its assets
+      id-token: write      # build provenance, like the releases built from a tag
+      attestations: write
+    env:
+      # The Auto Release action has no token input: it reads GITHUB_TOKEN from the environment, and stops with
+      # "The GITHUB_TOKEN environment variable was not set" on a step that doesn't have it. gh reads GITHUB_TOKEN
+      # too (GH_TOKEN first: cli.github.com/manual/gh_help_environment), so this one variable serves both the
+      # action and the gh commands below.
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ARTIFACT_REF: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7      # CHANGELOG.md for the notes, and the repository for gh
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: GoW_PSP_Launcher-${{ env.ARTIFACT_REF }}-${{ github.sha }}
+          path: dist
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: GoWLauncher-${{ env.ARTIFACT_REF }}-${{ github.sha }}
+          path: dist
+
+      # The version this run built. VERSION in tools/launcher.pyw names the ZIP, so the ZIP's name is the truth.
+      - name: Which version this build is
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          zips=(dist/GoW_PSP_Launcher-v*.zip)
+          if [ ${#zips[@]} -ne 1 ]; then
+            echo "::error::expected one GoW_PSP_Launcher-v*.zip in the build artifact, found ${#zips[@]}"
+            exit 1
+          fi
+          version=${zips[0]##*/GoW_PSP_Launcher-v}
+          version=${version%.zip}
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "zip=${zips[0]}" >> "$GITHUB_OUTPUT"
+          echo "this run built v$version (${zips[0]})"
+
+      # The release a commit asks for: the action matches the pushed commits against a pattern (the specific input
+      # that decides whether a release happens) and makes the tag and the release when one matches.
+      - name: "Create the release (a commit message with Release: <version>)"
+        id: release
+        if: github.event_name == 'push'
+        uses: CupOfTea696/gh-action-auto-release@v1.0.2
+        with:
+          title: "v$semver"
+          tag: "v$semver"
+          draft: false
+          changelog: CHANGELOG.md
+          changelog-entry: "$semver"
+          regex: '/^Release:\s*#{semver}\b/i'
+
+      # A manual run (the release input ticked): the version this build is, notes from its CHANGELOG section. The
+      # action can't decide this one: a manual run pushes nothing, so it has no commit messages to match.
+      - name: Create the release (manual run)
+        id: manual
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag='${{ steps.build.outputs.tag }}'
+          awk -v v="$tag" '$0 ~ "^## " v "($|[^0-9])" { on = 1; next } on && /^## / { exit } on { print }' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::CHANGELOG.md has no section for $tag: write one (heading like ## $tag (2026-11-20)) before releasing"
+            exit 1
+          fi
+          gh release create "$tag" --title "$tag" --notes-file notes.md --target "$GITHUB_SHA"
+          echo "released=true" >> "$GITHUB_OUTPUT"
+
+      # The action takes the version from the commit message; this run's ZIP takes it from tools/launcher.pyw. A
+      # release under another tag would offer this launcher as that other version (its self-update takes the
+      # GoW_PSP_Launcher-v*.zip of the latest release), so stop before attaching anything to it.
+      - name: The release must be this build's version
+        if: steps.release.outputs.released == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          want='${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.build.outputs.tag }}'
+          have='${{ steps.release.outputs.html_url }}'
+          if [ "$have" != "$want" ]; then
+            echo "::error::the release is $have, but this run built ${{ steps.build.outputs.zip }}: set VERSION in tools/launcher.pyw to ${{ steps.build.outputs.version }}, commit that, and release again (and delete $have, which has no files)"
+            exit 1
+          fi
+
+      # The signed statement a tag build makes, so a download of this release can be checked with
+      # `gh attestation verify GoW_PSP_Launcher-v<version>.zip --repo DrummingBird1/gow-psp-recomp`
+      - name: Build provenance
+        if: steps.release.outputs.released == 'true' || steps.manual.outputs.released == 'true'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/GoW_PSP_Launcher-v*.zip
+            dist/GoWLauncher.exe
+
+      # GoW_PSP_Launcher-v<VERSION>.zip and SHA256SUMS.txt, named and built as in the releases made by hand
+      - name: Attach the launcher ZIP and SHA256SUMS.txt
+        if: steps.release.outputs.released == 'true' || steps.manual.outputs.released == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload '${{ steps.build.outputs.tag }}' '${{ steps.build.outputs.zip }}' dist/SHA256SUMS.txt
+          gh release view '${{ steps.build.outputs.tag }}' --json tagName,assets --jq '"release " + .tagName + ": " + ([.assets[].name] | join(", "))'
+
+      - name: No release for this push
+        if: steps.release.outputs.released != 'true' && steps.manual.outputs.released != 'true'
+        run: |
+          echo "no release: no pushed commit message starts with 'Release: <version>', so nothing was published"

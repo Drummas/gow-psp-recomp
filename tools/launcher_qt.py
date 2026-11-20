@@ -2116,7 +2116,7 @@ class Window(QWidget):
         notes.setReadOnly(True)
         lay.addWidget(notes, 1)
         l = QLabel("Updating downloads the release ZIP, checks it against the release's SHA256SUMS.txt, replaces this "
-                   "launcher and restarts it. GoW_PSP_data (builds, saves, settings) stays as it is."
+                   "launcher and restarts it. Your builds, saves and settings stay as they are."
                    if self.L.FROZEN else "Running from source: update with git pull, or download the release.")
         l.setObjectName("dim")
         l.setWordWrap(True)

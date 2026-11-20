@@ -59,7 +59,7 @@ PORTABLE_MB = round(sum(p["size"] for p in PORTABLE) / 1e6)
 # Lines that say why a step failed start with this; the launcher window shows them in its error box (issue #29).
 ERROR = "ERROR: "
 MAX_PATH = 260
-SHORT_PATH_HINT = "Move the GoW_PSP folder (GoWLauncher.exe with its GoW_PSP_data folder) to a short path such as C:\\Games\\GoW_PSP"
+SHORT_PATH_HINT = "Move the GoW_PSP folder (the one with GoWLauncher.exe in it) to a short path such as C:\\Games\\GoW_PSP"
 
 
 def long_paths_ok():
@@ -90,16 +90,16 @@ def explain(e):
                                                         and not long_paths_ok()):
         return f"{e}. The path is longer than Windows allows ({MAX_PATH - 1} characters). {SHORT_PATH_HINT}."
     if win in (225, 226):  # ERROR_VIRUS_INFECTED, ERROR_VIRUS_DELETED
-        return (f"{e}. The antivirus program blocked it (a false positive for a compiler). Allow the GoW_PSP_data "
-                "folder in the antivirus, restore the file from its quarantine, then press Build again.")
+        return (f"{e}. The antivirus program blocked it (a false positive for a compiler). Allow the GoW_PSP folder "
+                "(where GoWLauncher.exe is) in the antivirus, restore the file from its quarantine, then press Build again.")
     if win in (1260, 4551):  # blocked by a group policy (AppLocker), or by Smart App Control / App Control
         return f"{e}. Windows' application control (Smart App Control, AppLocker or a company policy) blocked it."
     if win in (112, 39) or e.errno == errno.ENOSPC:
         return f"{e}. The disk is full: the build tools need about 550 MB and each game's build more. Free a few GB."
     if isinstance(e, PermissionError) or win in (5, 32, 33):
         return (f"{e}. Another program (most likely an antivirus program, or Windows' Controlled folder access) "
-                "would not let the launcher use this file. Allow GoWLauncher.exe and the GoW_PSP_data folder in it, "
-                "or move the GoW_PSP folder out of Documents, Desktop or OneDrive, then press Build again.")
+                "would not let the launcher use this file. Allow GoWLauncher.exe and the GoW_PSP folder it runs from "
+                "in it, or move the GoW_PSP folder out of Documents, Desktop or OneDrive, then press Build again.")
     if isinstance(e, FileNotFoundError) or win in (193, 216):
         return (f"{e}. The file is missing or damaged; an antivirus program may have removed it (see its "
                 "quarantine).")
@@ -177,8 +177,8 @@ def download_portable(root, out=print):
     gone = missing_tools(root)
     if gone:
         out(ERROR + "unpacked, but gone right after: " + ", ".join(str(f) for _, f in gone) + ". An antivirus program "
-            "most likely quarantined them (a false positive). Allow the GoW_PSP_data folder in the antivirus, then "
-            "press Build again.")
+            "most likely quarantined them (a false positive). Allow the GoW_PSP folder (where GoWLauncher.exe is) "
+            "in the antivirus, then press Build again.")
         for d in {d for d, _ in gone}:
             (root / d / ".complete").unlink(missing_ok=True)  # unpacked again on the next try
     return find_portable(root) is not None
@@ -266,7 +266,7 @@ def portable_consent_text():
              "once; about 550 MB unpacked)?", ""]
     lines += [f"  - {p['name']}" for p in PORTABLE]
     lines += ["", "They come from the projects' official GitHub releases, are checked against pinned SHA-256 hashes and stay "
-              "in the launcher's GoW_PSP_data folder. Nothing is installed in Windows and no administrator rights are needed."]
+              "in the launcher's own folder. Nothing is installed in Windows and no administrator rights are needed."]
     return "\n".join(lines)
 
 

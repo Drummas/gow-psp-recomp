@@ -17,24 +17,27 @@ gh attestation verify GoW_PSP_Launcher-vX.Y.Z.zip --repo DrummingBird1/gow-psp-r
 
 ## Where are my files?
 
-Everything the launcher creates is in `GoW_PSP_data` next to `GoWLauncher.exe`:
+Everything the launcher creates is in `build\`, inside the folder with `GoWLauncher.exe` (the `GoW_PSP` folder):
 
 | Path | What |
 |---|---|
-| `GoW_PSP_data\build\ms0`, `ms0_gos` | Saves (Chains of Olympus, Ghost of Sparta) |
-| `GoW_PSP_data\build\launcher.json` | Launcher settings |
-| `GoW_PSP_data\build\launcher_coo.log`, `launcher_gos.log` | What the game printed during the last Play |
-| `GoW_PSP_data\build\launcher_coo_input.txt`, `launcher_gos_input.txt` | Your button presses during the last Play |
-| `GoW_PSP_data\build\launcher_coo_perf.csv`, `launcher_gos_perf.csv` | Each frame's timings during the last Play |
-| `GoW_PSP_data\build\screenshots` | F12 screenshots (keep them private: they show the game) |
-| `GoW_PSP_data\build\toolchain` | The portable build tools (about 550 MB) |
+| `build\ms0`, `build\ms0_gos` | Saves (Chains of Olympus, Ghost of Sparta) |
+| `build\launcher.json` | Launcher settings (paths inside this folder are relative to it) |
+| `build\launcher_coo.log`, `build\launcher_gos.log` | What the game printed during the last Play |
+| `build\launcher_coo_input.txt`, `build\launcher_gos_input.txt` | Your button presses during the last Play |
+| `build\launcher_coo_perf.csv`, `build\launcher_gos_perf.csv` | Each frame's timings during the last Play |
+| `build\screenshots` | F12 screenshots (keep them private: they show the game) |
+| `build\toolchain` | The portable build tools (about 550 MB) |
 
-Your disc images stay where they are; the launcher only reads them.
+Your disc images stay where they are; the launcher only reads them. The folder is portable: move or copy the whole
+`GoW_PSP` folder and your builds, saves and settings move with it.
 
 ## How do I update?
 
-Download the new ZIP and extract it over the old `GoW_PSP` folder (or copy the new `GoWLauncher.exe` in). Keep
-`GoW_PSP_data`: your saves, settings and the build tools stay. The launcher rebuilds a game only when it needs to.
+Download the new ZIP and extract it over the old `GoW_PSP` folder (or copy the new `GoWLauncher.exe` in). The
+`build` folder inside it keeps your saves, settings and the build tools. The launcher rebuilds a game only when it
+needs to. An installation from v1.6.0 or earlier keeps using its `GoW_PSP_data` folder the first time: move it up
+into `GoW_PSP` (or leave it) and everything is found again.
 
 ## The build fails
 
@@ -47,10 +50,10 @@ Download the new ZIP and extract it over the old `GoW_PSP` folder (or copy the n
 - **The first Build stops after downloading the build tools** (issue #29). The error box and the log's `ERROR:`
   lines say why. The usual causes:
   - *The folder is too deep.* Windows allows 260 characters in a path unless long paths are turned on, and the
-    build tools have files 140 characters deep inside `GoW_PSP_data`. Move the `GoW_PSP` folder (the exe with its
-    `GoW_PSP_data`) to a short path such as `C:\Games\GoW_PSP`.
+    build tools have files 140 characters deep inside `build\toolchain`. Move the `GoW_PSP` folder to a short path
+    such as `C:\Games\GoW_PSP`.
   - *An antivirus program* removed or blocked `clang.exe`, `cmake.exe` or `ninja.exe` (a false positive). Allow
-    the `GoW_PSP_data` folder in it and press Build again; the launcher unpacks missing tools again.
+    the `GoW_PSP` folder in it and press Build again; the launcher unpacks missing tools again.
   - *Windows' Controlled folder access* (ransomware protection) keeps unknown programs from writing to Documents and
     Desktop: allow `GoWLauncher.exe`, or keep the `GoW_PSP` folder somewhere else.
   - The first configure also downloads about 140 small source files; on a slow connection that takes a few minutes.
@@ -80,7 +83,7 @@ channel` and `virtual-time skips` when the game closes; include it in a bug repo
 What works is a pack in this port's own format:
 
 1. Tick **Dump textures** in Advanced and play the parts you want to change. Each new texture is written once as
-   `<16 hex digits>.png` into `GoW_PSP_data/build/texture_dump/<game>/` (`build/texture_dump/` from source).
+   `<16 hex digits>.png` into `build/texture_dump/<game>/` (from source).
 2. Copy the ones you want into a folder of their own and edit or upscale them. Keep each file name; any size works
    (mipmaps are made on the GPU).
 3. Choose that folder as the texture pack folder (the `.png` files directly in it, not in subfolders) and untick

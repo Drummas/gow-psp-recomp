@@ -3,7 +3,7 @@ with --recomp, so recompiling needs no Python), the window (launcher_qt.py on Py
 dynamically as separate DLLs; launcher_art.py, Pillow,
 the Cinzel font with its OFL text from tools/launcher_assets), plus the sources a game build needs, taken from git (only
 tracked files, so never game data): CMakeLists.txt, LICENSE, cmake/, runtime/, recomp/runtime_funcs.json and
-the re/out tables recomp.py reads. The launcher unpacks them into GoW_PSP_data/ next to itself on the first Build.
+the re/out tables recomp.py reads. The launcher unpacks them into its own folder on the first Build.
 Also writes the release ZIP, GoW_PSP_Launcher-v<VERSION>.zip: one folder GoW_PSP/ with the exe and README.txt.
 
     .venv/Scripts/python.exe -m pip install -r tools/requirements-dev.txt
@@ -64,11 +64,11 @@ https://github.com/DrummingBird1/gow-psp-recomp
 
 You need your own disc image (.chd or .iso) of the US release. No game content is included.
 
-1. Run GoWLauncher.exe. It keeps everything it creates (builds, saves, settings) in the
-   GoW_PSP_data folder next to it.
+1. Run GoWLauncher.exe. It keeps everything it creates (builds, saves, settings) in this
+   folder, so you can move the whole GoW_PSP folder anywhere and keep playing.
 2. Choose the folder with your disc images.
 3. Press Build (one time per game), then Play. The first time it asks to download its
-   portable build tools (llvm-mingw, CMake, Ninja; about 246 MB, once) into GoW_PSP_data.
+   portable build tools (llvm-mingw, CMake, Ninja; about 246 MB, once) into this folder.
    No Visual Studio, no administrator rights, nothing installed in Windows.
 
 Windows warning: GoWLauncher.exe is unsigned (built with PyInstaller), so SmartScreen may say
@@ -76,7 +76,7 @@ Windows warning: GoWLauncher.exe is unsigned (built with PyInstaller), so SmartS
 PyInstaller programs as a false positive. Compare the SHA-256 with the one in the release notes
 (PowerShell: Get-FileHash GoWLauncher.exe).
 
-Bug reports: attach GoW_PSP_data\\build\\launcher_coo.log (or launcher_gos.log) and, if you can,
+Bug reports: attach build\\launcher_coo.log (or launcher_gos.log) and, if you can,
 a recorded input file. Never attach game files.
 """
 

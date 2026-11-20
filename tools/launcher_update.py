@@ -3,7 +3,8 @@ SHA256SUMS.txt and swaps the exe in place.
 
 A running exe can't be overwritten on Windows but it can be renamed: the update renames GoWLauncher.exe to
 GoWLauncher.old.exe, moves the new exe into its place, starts it with --updated <old exe> and exits; the new
-launcher deletes the old exe. GoW_PSP_data (builds, saves, settings) next to the exe is never touched.
+launcher deletes the old exe. What the launcher created in its own folder (builds, saves, settings) is never
+touched.
 If any step fails the old exe is put back. GOW_UPDATE_API points at another releases/latest JSON (tests): https, or
 http on this PC only, as are the download links.
 

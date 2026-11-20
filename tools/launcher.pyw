@@ -2,7 +2,8 @@
 
 Picks the game, builds it from your own disc image (the EBOOT is decrypted from it), sets the
 graphics options of the hardware renderer (docs/dev-history/phase13-graphics.md) and starts it. Settings are kept
-in build/launcher.json (your paths stay on your machine; build/ is not in git).
+in build/launcher.json (your paths stay on your machine; build/ is not in git). Paths inside the installation folder
+are written relative to it (store_path), so the folder can be moved or copied and keeps working.
 
     python tools/launcher.pyw                     the window
     python tools/launcher.pyw --build coo|gos     build without the window (recompile + CMake)
@@ -26,23 +27,51 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import toolchain  # noqa: E402
 
-VERSION = "1.6.0"
+VERSION = "1.7.0"
 # Frozen (GoWLauncher.exe, tools/build_launcher.py): the exe carries the sources the build needs and unpacks them
-# on the first Build. Everything it writes (sources, build/, saves, settings) goes into one folder next to the exe,
-# GoW_PSP_data/, so a Downloads or Desktop folder only gains that one folder.
+# on the first Build. Everything it writes (sources, build/, saves, settings) goes into the folder the exe itself is
+# in, so an installation is one self-contained folder that can be moved or copied anywhere.
 FROZEN = getattr(sys, "frozen", False)
-DATA_DIR = "GoW_PSP_data"
+DATA_DIR = "GoW_PSP_data"  # where v1.1.0 to v1.6.0 kept everything: still read, never created (data_root)
 
 
 def data_root():
+    """The installation folder: the one GoWLauncher.exe is in."""
     exe_dir = Path(sys.executable).resolve().parent
     if (exe_dir / "build" / "launcher.json").exists():
-        return exe_dir  # set up by v1.0.0, which kept its files next to the exe: keep the builds and saves there
-    return exe_dir / DATA_DIR
+        return exe_dir  # set up by v1.0.0 or by this version: its builds and saves stay there
+    old = exe_dir / DATA_DIR
+    if (old / "build" / "launcher.json").exists():
+        return old  # set up by v1.1.0 to v1.6.0, which kept everything in GoW_PSP_data: keep its builds and saves
+    return exe_dir
 
 
 ROOT = data_root() if FROZEN else Path(__file__).resolve().parent.parent
 CONFIG = Path(os.environ.get("GOW_LAUNCHER_CONFIG") or ROOT / "build" / "launcher.json")
+
+
+# --- paths in the settings --------------------------------------------------------------------------------------
+# launcher.json keeps every path inside the installation folder relative to its root: moving the folder (a USB
+# stick, another drive, a copy for a second PC) keeps the settings pointing at the same files.
+def store_path(p):
+    """A path as launcher.json saves it: relative to ROOT when it is inside the installation folder, as it is when it
+    is elsewhere (a disc image, a texture pack outside) - those can only stay absolute."""
+    if not isinstance(p, str) or not p:
+        return p
+    try:
+        rel = Path(p).resolve().relative_to(ROOT.resolve())
+    except (OSError, ValueError):
+        return p
+    return rel.as_posix() or "."
+
+
+def load_path(p):
+    """A path from launcher.json (store_path) as a full path again: one that isn't absolute is inside ROOT."""
+    if not isinstance(p, str) or not p:
+        return p
+    return p if Path(p).is_absolute() else str(ROOT / p)
+
+
 GAMES = {
     "coo": {"id": "UCUS98653", "title": "God of War: Chains of Olympus", "build": "build/cmake_full", "ms0": "build/ms0"},
     "gos": {"id": "UCUS98737", "title": "God of War: Ghost of Sparta", "build": "build/cmake_gos_full", "ms0": "build/ms0_gos"},
@@ -224,6 +253,10 @@ def load_config():
         # new default (fullscreen) once; the Fullscreen option and F11 still switch back to a window.
         saved["fullscreen"], saved["settings_version"] = True, 2
     cfg.update(saved)
+    for k in ("game_folder", "texture_pack"):
+        cfg[k] = load_path(cfg.get(k, ""))
+    if isinstance(cfg.get("disc"), dict):
+        cfg["disc"] = {g: load_path(p) for g, p in cfg["disc"].items()}
     cfg["_fixed"] = validate_config(cfg)
     DISC_IDS.clear()
     DISC_IDS.update({g: i for g, i in (cfg.get("disc_ids") or {}).items() if g in GAMES and i in known_ids(g)})
@@ -233,7 +266,11 @@ def load_config():
 def save_config(cfg):
     cfg["disc_ids"] = dict(DISC_IDS)
     CONFIG.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG.write_text(json.dumps({k: v for k, v in cfg.items() if not k.startswith("_")}, indent=1), encoding="utf-8")
+    out = {k: v for k, v in cfg.items() if not k.startswith("_")}
+    for k in ("game_folder", "texture_pack"):
+        out[k] = store_path(out.get(k, ""))
+    out["disc"] = {g: store_path(p) for g, p in (out.get("disc") or {}).items()}
+    CONFIG.write_text(json.dumps(out, indent=1), encoding="utf-8")
 
 
 # Build folders per toolchain: the portable one (Ninja, single-config) and Visual Studio (multi-config, Release/).
@@ -590,14 +627,32 @@ def cmake_root(out=print):
     return link
 
 
-def clean_cmake_dir(build_dir, out=print):
-    """Removes CMake's cache and probe results from a build folder (the sources and fetched dependencies stay).
-    A configure that was interrupted, or ran twice at once in the same folder, can leave a cache that fails
-    every later configure (e.g. "No CMAKE_C_COMPILER could be found" although the compiler is there)."""
+def cache_moved(build_dir):
+    """True when this build folder's CMakeCache.txt was written in another folder: the installation was moved or
+    copied after a build, and CMake then stops with "The current CMakeCache.txt directory ... is different than the
+    directory ... where CMakeCache.txt was created". Its cache is made again before configuring (clean_cmake_dir)."""
+    try:
+        text = (Path(build_dir) / "CMakeCache.txt").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    here = {os.path.normcase(os.path.normpath(os.path.abspath(build_dir))),
+            os.path.normcase(os.path.normpath(str(Path(build_dir).resolve())))}
+    for line in text.splitlines():
+        if line.startswith("CMAKE_CACHEFILE_DIR:"):
+            return os.path.normcase(os.path.normpath(line.split("=", 1)[-1].strip())) not in here
+    return False
+
+
+def clean_cmake_dir(build_dir, out=print, why=""):
+    """Removes CMake's cache and probe results from a build folder (the sources and fetched dependencies stay), and
+    from the dependency sub-builds FetchContent keeps there. A configure that was interrupted, ran twice at once in
+    the same folder, or was made in another folder (cache_moved) can leave a cache that fails every later configure
+    (e.g. "No CMAKE_C_COMPILER could be found" although the compiler is there)."""
     d = Path(build_dir)
-    out(f"configure failed with an existing CMake cache in {d}: removing CMakeCache.txt and CMakeFiles, retrying once")
-    (d / "CMakeCache.txt").unlink(missing_ok=True)
-    shutil.rmtree(d / "CMakeFiles", ignore_errors=True)
+    out(why or f"configure failed with an existing CMake cache in {d}: removing CMakeCache.txt and CMakeFiles, retrying once")
+    for sub in [d] + sorted(d.glob("_deps/*-subbuild")):
+        (sub / "CMakeCache.txt").unlink(missing_ok=True)
+        shutil.rmtree(sub / "CMakeFiles", ignore_errors=True)
 
 
 def run_command(cmd, out=print, env=None):
@@ -627,6 +682,10 @@ def ensure_disc_tool(out=print, ask=toolchain.ask_console):
     tools_build = ROOT / FLAVOURS[tools["kind"]]["tools"]
     for cmd in disc_tool_steps(tools):
         had_cache = is_configure(cmd) and (tools_build / "CMakeCache.txt").exists()
+        if had_cache and cache_moved(tools_build):
+            clean_cmake_dir(tools_build, out, f"the installation moved or was copied since {tools_build} was configured: "
+                                             "making its CMake cache again")
+            had_cache = False
         code, lines = run_command(cmd, out, cmake_env(tools))
         if code and had_cache:
             clean_cmake_dir(tools_build, out)
@@ -806,6 +865,10 @@ def build_with(cfg, game, tools, out=print):
             continue
         build_dir = Path(cmd[cmd.index("-B") + 1]) if is_configure(cmd) else None
         had_cache = build_dir is not None and (build_dir / "CMakeCache.txt").exists()
+        if had_cache and cache_moved(build_dir):
+            clean_cmake_dir(build_dir, out, f"the installation moved or was copied since {build_dir} was configured: "
+                                           "making its CMake cache again")
+            had_cache = False
         code, lines = run_command(cmd, out, cmake_env(tools))
         if code and had_cache:
             clean_cmake_dir(build_dir, out)
@@ -1058,7 +1121,7 @@ def add_to_steam(game):
 def cli_streams():
     """The exe is a windowed program (no console window when started from Explorer, a shortcut or Steam), so its
     command-line modes have no stdout. Started from a terminal, print there (attach to its console); with the output
-    redirected, the pipe or file already works; otherwise write to GoW_PSP_data/build/launcher_cli.log."""
+    redirected, the pipe or file already works; otherwise write to build/launcher_cli.log."""
     if not (FROZEN and os.name == "nt") or sys.stdout is not None:
         return
     import ctypes

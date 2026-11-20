@@ -10,7 +10,7 @@
 Play **God of War: Chains of Olympus** and **God of War: Ghost of Sparta** natively on Windows, recompiled from your own
 PSP disc, with 4K, MSAA, HDR and high frame rates.
 
-**[⬇ Download the launcher (v1.6.0)](https://github.com/DrummingBird1/gow-psp-recomp/releases/latest)**: one ZIP, no
+**[⬇ Download the launcher (v1.7.0)](https://github.com/DrummingBird1/gow-psp-recomp/releases/latest)**: one ZIP, no
 installation. Then follow the [quick start](#quick-start).
 
 > **Unofficial fan project.** Not affiliated with or endorsed by Sony Interactive Entertainment or Santa Monica Studio.
@@ -35,10 +35,11 @@ installation. Then follow the [quick start](#quick-start).
 
 You only download **one file**, the launcher. No Python, no manual setup.
 
-1. Download [`GoW_PSP_Launcher-v1.6.0.zip`](https://github.com/DrummingBird1/gow-psp-recomp/releases/latest/download/GoW_PSP_Launcher-v1.6.0.zip)
+1. Download [`GoW_PSP_Launcher-v1.7.0.zip`](https://github.com/DrummingBird1/gow-psp-recomp/releases/latest/download/GoW_PSP_Launcher-v1.7.0.zip)
    from the [latest release](https://github.com/DrummingBird1/gow-psp-recomp/releases/latest) and extract it anywhere: you get
    one `GoW_PSP` folder with `GoWLauncher.exe` and a short `README.txt`.
-   Everything the launcher creates (sources, builds, saves, settings) goes into `GoW_PSP_data` next to the exe.
+   Everything the launcher creates (sources, builds, saves, settings) goes into that same folder, so the whole
+   `GoW_PSP` folder can be moved or copied anywhere (another drive, a USB stick) and keeps working.
 2. Run `GoWLauncher.exe` and choose the folder with **your own disc images** (`.chd` or `.iso`). It detects each game by
    its disc ID, not by the file name.
 3. Press **Build**. The first time, the launcher asks to download its portable build tools (**about 246 MB**, once):
@@ -53,11 +54,10 @@ it locally, once.
 
 > **Windows warning?** `GoWLauncher.exe` is unsigned and built with PyInstaller, so Windows SmartScreen may show
 > "Windows protected your PC" (click **More info**, then **Run anyway**), and some antivirus programs flag
-> PyInstaller programs as a false positive. Check that your download is the real one (v1.6.0 SHA-256):
-> - `GoW_PSP_Launcher-v1.6.0.zip`: `1826b86d09b5ee6ce80b7828620f5f80660baac1bbe590b3bd9645fb5851ebcb`
-> - `GoW_PSP\GoWLauncher.exe`: `071f8371dff5cd303db02fc60b22b45cf1481b397796ae39c25a1283f121215b`
+> PyInstaller programs as a false positive. Check that your download is the real one: each release attaches
+> `SHA256SUMS.txt`, with the SHA-256 of the ZIP and of `GoW_PSP\GoWLauncher.exe` inside it.
 >
-> (PowerShell: `Get-FileHash <file>`). Each release lists its hashes in the release notes.
+> (PowerShell: `Get-FileHash <file>`, or `sha256sum -c SHA256SUMS.txt` next to the ZIP.)
 
 Problems? See [Troubleshooting and FAQ](docs/troubleshooting.md): SmartScreen, where files are, updating, build
 failures, stutter.
@@ -80,7 +80,7 @@ What each option does: [graphics guide](docs/graphics.md).
 
 ![Launcher tour](docs/images/launcher-tour.gif)
 
-## Status: preview (v1.6.0)
+## Status: preview (v1.7.0)
 
 Every level of both games loads and runs (automated tours of every level), saving and loading work, and sound, music
 and movies play. What changed in each version is in the [changelog](CHANGELOG.md), and what comes next in the
@@ -140,7 +140,7 @@ screenshots of the game.**
 <summary>Where the launcher and the game write their logs</summary>
 
 The game starts in fullscreen (F11 or Alt+Enter switches to a window; the launcher's Fullscreen option sets the
-default) without a console window. What it prints goes to `GoW_PSP_data\build\launcher_coo.log` (or
+default) without a console window. What it prints goes to `build\launcher_coo.log` (or
 `launcher_gos.log`), your button presses of that session to `launcher_coo_input.txt` (or `launcher_gos_input.txt`),
 and each frame's timings to `launcher_coo_perf.csv` (or `launcher_gos_perf.csv`). The next Play overwrites them, so
 copy them right after the bug happens.
@@ -148,7 +148,7 @@ copy them right after the bug happens.
 The launcher opens no console window either. Its command-line options (`GoWLauncher.exe --version`, `--check-update`,
 `--update`, `--build coo`) print in the terminal you start them from (in PowerShell, use
 `Start-Process -Wait -NoNewWindow .\GoWLauncher.exe --version` to wait for it), or else to
-`GoW_PSP_data\build\launcher_cli.log`. While the game runs, the launcher minimizes itself and stops its animation, so
+`build\launcher_cli.log`. While the game runs, the launcher minimizes itself and stops its animation, so
 it doesn't take time from the game.
 
 </details>
