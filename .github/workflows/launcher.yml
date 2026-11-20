@@ -200,7 +200,9 @@ jobs:
             echo "::error::CHANGELOG.md has no section for $tag: write one (heading like ## $tag (2026-11-20)) before releasing"
             exit 1
           fi
-          gh release create "$tag" --title "$tag" --notes-file notes.md --target "$GITHUB_SHA"
+          # a repair run for a version that already has its release: rewrite the notes instead of failing
+          gh release create "$tag" --title "$tag" --notes-file notes.md --target "$GITHUB_SHA" ||
+            gh release edit "$tag" --title "$tag" --notes-file notes.md
           echo "released=true" >> "$GITHUB_OUTPUT"
 
       # The action takes the version from the commit message; this run's ZIP takes it from tools/launcher.pyw. A
@@ -218,6 +220,21 @@ jobs:
             exit 1
           fi
 
+      # The version's own CHANGELOG section. The action's notes start at the changelog's top heading, so they carry
+      # every older version as well; the release is given its section here (both paths, and on a repair run).
+      - name: Set the release notes
+        if: steps.release.outputs.released == 'true' || steps.manual.outputs.released == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag='${{ steps.build.outputs.tag }}'
+          awk -v v="$tag" '$0 ~ "^## " v "($|[^0-9])" { on = 1; next } on && /^## / { exit } on { print }' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::CHANGELOG.md has no section for $tag"
+            exit 1
+          fi
+          gh release edit "$tag" --notes-file notes.md
+
       # The signed statement a tag build makes, so a download of this release can be checked with
       # `gh attestation verify GoW_PSP_Launcher-v<version>.zip --repo DrummingBird1/gow-psp-recomp`
       - name: Build provenance
@@ -234,7 +251,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release upload '${{ steps.build.outputs.tag }}' '${{ steps.build.outputs.zip }}' dist/SHA256SUMS.txt
+          gh release upload '${{ steps.build.outputs.tag }}' '${{ steps.build.outputs.zip }}' dist/SHA256SUMS.txt --clobber
           gh release view '${{ steps.build.outputs.tag }}' --json tagName,assets --jq '"release " + .tagName + ": " + ([.assets[].name] | join(", "))'
 
       - name: No release for this push
