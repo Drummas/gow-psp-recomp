@@ -10,7 +10,7 @@
 Play **God of War: Chains of Olympus** and **God of War: Ghost of Sparta** natively on Windows, recompiled from your own
 PSP disc, with 4K, MSAA, HDR and high frame rates.
 
-**[⬇ Download the launcher (v1.7.0)](https://github.com/DrummingBird1/gow-psp-recomp/releases/latest)**: one ZIP, no
+**[⬇ Download the launcher (v1.7.1)](https://github.com/DrummingBird1/gow-psp-recomp/releases/latest)**: one ZIP, no
 installation. Then follow the [quick start](#quick-start).
 
 > **Unofficial fan project.** Not affiliated with or endorsed by Sony Interactive Entertainment or Santa Monica Studio.
@@ -35,7 +35,7 @@ installation. Then follow the [quick start](#quick-start).
 
 You only download **one file**, the launcher. No Python, no manual setup.
 
-1. Download [`GoW_PSP_Launcher-v1.7.0.zip`](https://github.com/DrummingBird1/gow-psp-recomp/releases/latest/download/GoW_PSP_Launcher-v1.7.0.zip)
+1. Download [`GoW_PSP_Launcher-v1.7.1.zip`](https://github.com/DrummingBird1/gow-psp-recomp/releases/latest/download/GoW_PSP_Launcher-v1.7.1.zip)
    from the [latest release](https://github.com/DrummingBird1/gow-psp-recomp/releases/latest) and extract it anywhere: you get
    one `GoW_PSP` folder with `GoWLauncher.exe` and a short `README.txt`.
    Everything the launcher creates (sources, builds, saves, settings) goes into that same folder, so the whole
@@ -80,7 +80,7 @@ What each option does: [graphics guide](docs/graphics.md).
 
 ![Launcher tour](docs/images/launcher-tour.gif)
 
-## Status: preview (v1.7.0)
+## Status: preview (v1.7.1)
 
 Every level of both games loads and runs (automated tours of every level), saving and loading work, and sound, music
 and movies play. What changed in each version is in the [changelog](CHANGELOG.md), and what comes next in the

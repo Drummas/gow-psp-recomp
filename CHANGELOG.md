@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.7.1 (2026-11-20)
+
+- **Fix: the first run built only one of the two games.** With both disc images in the game folder, the game on the
+  selected card was built (Chains of Olympus) and Ghost of Sparta stayed on "Needs building" until it was selected
+  and built by hand. The first run now builds every disc it found in the folder, one game after the other, so both
+  cards are ready when it finishes. A build that fails stops there and says why.
+
 ## v1.7.0 (2026-11-20)
 
 - **The launcher keeps everything in its own folder.** Builds, saves, settings and the build tools now live in the

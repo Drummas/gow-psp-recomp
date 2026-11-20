@@ -722,7 +722,7 @@ class Window(QWidget):
         self.no_menu = self.no_art or env_on("GOW_NO_MENU_BG")
         self.reduce_motion = bool(self.cfg.get("reduce_motion", False))
         self.bridge = Bridge()
-        self.log_lines, self.log_win, self.busy = [], None, False
+        self.log_lines, self.log_win, self.busy, self.build_queue = [], None, False, []
         self.preset = self.cfg.get("preset") or "Custom"
         self.applying = False
         self.view = None
@@ -1860,8 +1860,7 @@ class Window(QWidget):
         self.collect()
         if not found:
             QMessageBox.warning(self, "Game folder", "No disc image of either game was found in this folder (.chd or .iso).")
-        g = self.cfg.get("game", "coo")
-        if first and found and self.game_state(g) == "Needs building":
+        if first and found and self.needs_build():
             self.do_build(first_run=True)
             return
         self.show_view("main")
@@ -1872,24 +1871,42 @@ class Window(QWidget):
         self.prep_prog.set(0, "Starting")
         self.show_view("prep")
 
+    def needs_build(self):
+        """The games in the game folder that aren't built yet (or whose code this launcher is newer than)."""
+        return [g for g in self.L.GAMES if self.game_state(g) == "Needs building"]
+
     def do_build(self, first_run=False):
-        if self.busy and not first_run:
+        """Builds the chosen game; on the first run (both disc images just found), every game that isn't built yet."""
+        if self.busy:
             return
-        g = self.cfg.get("game", "coo")
+        c = self.collect()
+        if first_run:  # both discs are in the folder: build both, so neither card stays on "Needs building"
+            todo = [g for g in self.needs_build() if c["disc"].get(g)]
+        else:
+            todo = [self.cfg.get("game", "coo")]
+        if not todo:
+            return
+        self.build_queue = todo[1:]
+        self.start_build(todo[0], first_run)
+
+    def start_build(self, g, one_time=False):
         c = self.collect()
         try:
             self.L.check_disc(c, g)
         except ValueError as e:
+            self.build_queue = []
             QMessageBox.critical(self, "Build", str(e))
             return
         self.busy = True
-        if first_run or self.view == "prep":
-            self.prep(f"Preparing {self.L.GAMES[g]['title']} (one time, a few minutes)")
+        if one_time or self.view == "prep":
+            self.prep("Preparing both games (one time, a few minutes)" if one_time and self.build_queue
+                      else f"Preparing {self.L.GAMES[g]['title']} (one time, a few minutes)")
         gen = len(list(self.L.gen_dir(g).glob("*.c"))) or 120
         self.start_progress("Starting", gen + len(list((self.L.ROOT / "runtime").glob("*.c*"))))
         self.refresh()
         threading.Thread(target=lambda: self.build_done(self.run_safely(lambda: self.L.run_build(c, g, self.build_line, self.ask),
                                                                         False), g), daemon=True).start()
+        return True
 
     def build_line(self, line):
         self.log(line)
@@ -1938,6 +1955,9 @@ class Window(QWidget):
     def build_done(self, ok, g):
         def done():
             self.pstate["live"] = False
+            if ok and self.build_queue and self.start_build(self.build_queue.pop(0), one_time=True):
+                return  # the first run builds the other game next, until every disc found has its build
+            self.build_queue = []
             self.prog.set(1.0, "Done" if ok else "Failed")
             self.prep_prog.set(1.0, "Done" if ok else "Failed")
             self.busy = False

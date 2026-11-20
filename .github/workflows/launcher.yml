@@ -5,9 +5,9 @@
 # A release is made by the publish job below, through the Auto Release action
 # (https://github.com/marketplace/actions/auto-release, CupOfTea696/gh-action-auto-release): a pushed commit whose
 # message starts with
-#     Release: 1.7.0
-# (or Release: v1.7.0, or Release: 1.7.0 (#72)) creates the release v1.7.0, with the same artifacts as a release
-# made by hand: GoW_PSP_Launcher-v1.7.0.zip and SHA256SUMS.txt, plus their build provenance (GitHub adds the source
+#     Release: 1.7.1
+# (or Release: v1.7.1, or Release: 1.7.1 (#72)) creates the release v1.7.1, with the same artifacts as a release
+# made by hand: GoW_PSP_Launcher-v1.7.1.zip and SHA256SUMS.txt, plus their build provenance (GitHub adds the source
 # archives itself). Its notes are that version's section of CHANGELOG.md, so write the section, set VERSION in
 # tools/launcher.pyw to the same version, and make that commit the last change of the push: the ZIP is built from
 # the pushed tree, and the job refuses to attach a ZIP named after another version.

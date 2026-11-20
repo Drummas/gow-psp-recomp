@@ -1,7 +1,7 @@
 # Roadmap
 
 Where the project is going, from the requests on GitHub (issues, discussions, pull requests) and the project's own
-list. Updated for v1.7.0 (November 2026). Ideas and requests are welcome in
+list. Updated for v1.7.1 (November 2026). Ideas and requests are welcome in
 [Discussions](https://github.com/DrummingBird1/gow-psp-recomp/discussions).
 
 ## Shipped
@@ -10,6 +10,7 @@ The details are in the [changelog](../CHANGELOG.md).
 
 | Version | Highlights | Asked in |
 |---|---|---|
+| v1.7.1 | The first run builds both games when both disc images are in the game folder, instead of only the selected one | — |
 | v1.7.0 | Everything the launcher creates goes into its own folder instead of `GoW_PSP_data`, and the folder can be moved or copied: settings keep their paths relative to it, and a build folder made before the move is configured again instead of failing | — |
 | v1.6.0 | The Vortex no longer loops forever; builds in folders with [ ] in their name; European releases (preview); Auto QTE for Chains of Olympus; the launcher in Turkish; xBRZ texture upscaling | #51, #56, #61, #62, #65, #66, #6, #64, #26, #60 |
 | v1.5.0 | Keypad keys can be bound; a damaged libchdr download is fetched again; the mouse cursor hides; a freeze leaves a trace in the log; build provenance for the downloads | #57, #46, #44, #52, #54 |
